@@ -69,4 +69,4 @@ def greedy_ordered_color(graph, k=None):
         degrees.sort(reverse=True)
         return greedy_unordered_color(permute_graph(graph, [x[1] for x in degrees]), random=False)
 
-greedy_color = greedy_unordered_color
+greedy_color = greedy_ordered_color

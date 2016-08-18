@@ -27,7 +27,7 @@ def brute_force_color(graph, k=None):
         return (k, color(k))
 
 
-def greedy_unordered_color(graph, k=None, random=True):
+def greedy_unordered_color(graph, k=None, random=False):
     """
     Tries a greedy coloring of the graph.
     If k is given returns None if the coloring is invalid, otherwise returns the coloring.
@@ -35,6 +35,7 @@ def greedy_unordered_color(graph, k=None, random=True):
     If random is True, colors are chosen randomly, otherwise smallest available is chosen
     """
     n = len(graph)
+    print(graph)
 
     def color(k):
         all_colors = set(range(n))
@@ -49,7 +50,10 @@ def greedy_unordered_color(graph, k=None, random=True):
                     colors[v] = min(left)
             else:
                 return None
-        return (max(colors) + 1, colors)
+        if is_coloring(graph, colors):
+            return (max(colors) + 1, colors)
+        else:
+            return None
 
     if k is None:
         return color(k)
@@ -65,8 +69,55 @@ def greedy_ordered_color(graph, k=None):
     if k is not None:
         return greedy_unordered_color(graph, k)
     else:
+        n = len(graph)
         degrees = [(len(row), i) for i, row in enumerate(graph)]
         degrees.sort(reverse=True)
-        return greedy_unordered_color(permute_graph(graph, [x[1] for x in degrees]), random=False)
+        perm = [x[1] for x in degrees]
+        n_cols, permuted_cols = greedy_unordered_color(permute_graph(graph, perm), random=False)
+        actual_cols = [0 for _ in range(n)]
+        for i in range(n):
+            actual_cols[perm[i]] = permuted_cols[i]
+        return n_cols, actual_cols
 
 greedy_color = greedy_ordered_color
+
+
+def planar_6_color(graph):
+    """
+    Gives a 6-coloring of a graph.
+    This can be done greedily as a planar graph always has a vertex with
+    degree<=5, and removing that vertex leaves a planar graph
+    """
+    INF = 100000
+    n = len(graph)
+    degrees = [[len(row), i] for i, row in enumerate(graph)]
+    # We remove the smallest deg vertex and color the rest recursively.
+    # To do this we use a fill order list which tells us the order of removal.
+    # This is enough to color the graph.
+
+    def color(order):
+        colors = [-1 for _ in range(n)]
+        all_colors = set(range(6))
+        for v in order:
+            adj_colors = set([colors[u] for u in graph[v]])
+            colors[v] = min(all_colors - adj_colors)
+        return colors
+
+    fill_order = []
+    for _ in range(n):
+        deg, idx = min(degrees)
+        if deg >= 5:
+            print('Error: graph is not planar - reduction has min degree > 5')
+            return None
+        elif deg == INF:
+            print('Error: ran out of vertices')
+        else:
+            fill_order.append(idx)
+            for v in graph[idx]:
+                # update undeleted neighbours
+                if degrees[v][0] != INF:
+                    degrees[v][0] -= 1
+            # setting to inf deletes
+            degrees[idx][0] = INF
+    cols = color(fill_order)
+    return max(cols) + 1, cols
